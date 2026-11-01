@@ -1,7 +1,8 @@
 const ENDPOINTS = [
-  "https://overpass.private.coffee/api/interpreter",
   "https://overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ];
 
 export default async (req) => {
@@ -13,10 +14,14 @@ export default async (req) => {
     return Response.json({ error: "Invalid coordinates" }, { status: 400 });
   }
 
+  // regex ki jagah alag-alag filters: ye zyada fast hote hain
   const query = `
-    [out:json][timeout:8];
-    nwr["amenity"~"hospital|clinic"](around:5000,${lat},${lon});
-    out center 50;
+    [out:json][timeout:9];
+    (
+      nwr["amenity"="hospital"](around:5000,${lat},${lon});
+      nwr["amenity"="clinic"](around:5000,${lat},${lon});
+    );
+    out center 40;
   `;
 
   try {
@@ -27,10 +32,10 @@ export default async (req) => {
           body: "data=" + encodeURIComponent(query),
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "nearby-doctors-app/1.0 (contact: your-email@example.com)",
-            Accept: "application/json",
+            // APNA REAL EMAIL YA SITE YAHAN DAALO
+            "User-Agent": "MediSynncare/1.0 (https://medisynncare24.netlify.app)",
           },
-          signal: AbortSignal.timeout(8000),
+          signal: AbortSignal.timeout(9000),
         });
         if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
         return res.json();
