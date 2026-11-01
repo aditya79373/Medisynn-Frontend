@@ -15,8 +15,8 @@ export default async (req) => {
 
   const query = `
     [out:json][timeout:8];
-    nwr["amenity"="hospital"](around:5000,${lat},${lon});
-    out center;
+    nwr["amenity"~"hospital|clinic"](around:5000,${lat},${lon});
+    out center 50;
   `;
 
   try {
@@ -25,10 +25,14 @@ export default async (req) => {
         const res = await fetch(url, {
           method: "POST",
           body: "data=" + encodeURIComponent(query),
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "nearby-doctors-app/1.0 (contact: your-email@example.com)",
+            Accept: "application/json",
+          },
           signal: AbortSignal.timeout(8000),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
         return res.json();
       })
     );
@@ -36,6 +40,11 @@ export default async (req) => {
       headers: { "Cache-Control": "public, max-age=300" },
     });
   } catch (err) {
-    return Response.json({ error: "All Overpass mirrors failed" }, { status: 502 });
+    const reasons = (err.errors || [err]).map((e) => e.message);
+    console.error("Overpass failures:", reasons);
+    return Response.json(
+      { error: "All Overpass mirrors failed", reasons },
+      { status: 502 }
+    );
   }
 };
