@@ -11,6 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const resolveImageUrl = (img?: string | null) => {
+  if (!img) return null;
+  if (/^(https?:)?\/\//i.test(img) || img.startsWith("data:")) return img;
+  const clean = img.replace(/^\/+/, "");
+  return `${API}/${clean.startsWith("uploads/") ? clean : `uploads/${clean}`}`;
+};
 type Role = "user" | "assistant";
 
 type Message = {
@@ -59,13 +65,14 @@ const ChatBubble: React.FC<{ message: Message; userImage?: string | null }> = ({
         )}
       </div>
 
-      {!isAssistant && (
+{!isAssistant && (
   <img
-    src={
-      userImage
-        ? `${API}/uploads/${userImage}`
-        : "/default-user.svg"
-    }
+    src={userImage || "/default-user.svg"}
+    onError={(e) => {
+      e.currentTarget.onerror = null;
+      e.currentTarget.src = "/default-user.svg";
+    }}
+    alt="You"
     className="h-12 w-12 rounded-full object-cover border"
   />
 )}
@@ -91,20 +98,10 @@ useEffect(() => {
       body: JSON.stringify({ email }),
     })
       .then((res) => res.json())
-      .then((data) => {
-        console.log("PROFILE RESPONSE:", data); // <-- ADD THIS LINE
-        console.log("🚀 data.profile_image =", data.profile_image);
-
-        if (data.profile_image) {
-          const parts = data.profile_image.split("/");
-          const filename = parts[parts.length - 1];
-          console.log("✔️ Extracted filename =", filename);
-          setUserImage(filename);
-        } else {
-          console.log("❌ No image found in backend");
-          setUserImage(null);
-        }
-      })
+.then((data) => {
+  console.log("PROFILE RESPONSE:", data);
+  setUserImage(resolveImageUrl(data.profile_image));
+})
       .catch((err) => console.log("Profile Fetch Error:", err));
   };
 
@@ -244,30 +241,7 @@ const callGemini = async (prompt: string) => {
   };
 
   const canSend = useMemo(() => input.trim().length > 0 && !sending, [input, sending]);
-  // ---------- LOAD USER IMAGE FROM BACKEND ----------
-useEffect(() => {
-  const email = localStorage.getItem("userEmail");
-  if (!email) return;
 
-  fetch(`${API}/api/profile`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      console.log("🔥 RAW PROFILE RESPONSE =", data);
-
-      if (data.profile_image) {
-        const filename = data.profile_image.split("/uploads/")[1];
-        console.log("📌 Extracted Filename =", filename);
-        setUserImage(filename);
-      } else {
-        console.log("❌ No profile_image found in backend");
-      }
-    })
-    .catch((err) => console.log("Profile Fetch Error:", err));
-}, []);
 
 
 
