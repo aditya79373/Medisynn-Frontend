@@ -92,7 +92,7 @@ useEffect(() => {
     const email = localStorage.getItem("userEmail");
     if (!email) return;
 
-    fetch(`${API}/profile`, {
+    fetch(`${API}/api/profile`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
